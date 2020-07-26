@@ -1,18 +1,19 @@
 import Phaser from 'phaser'
+
 import Lizard from '../enemies/Lizard'
+import Fauna from '../characters/Fauna'
 
-import { FAUNA, createCharacterAnims } from '../anims/CharacterAnims'
-
+import { createCharacterAnims } from '../anims/CharacterAnims'
 import { createLizardAnims } from '../anims/EnemyAnims'
+
+import '../characters/Fauna'
 
 import { debugDraw } from '../utils/debug'
 
 export default class Game extends Phaser.Scene
 {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
-  private fauna!: Phaser.Physics.Arcade.Sprite
-
-  private hit = 0;
+  private fauna!: Fauna
 
   constructor() {
 		super('game')
@@ -35,12 +36,7 @@ export default class Game extends Phaser.Scene
 
     walls.setCollisionByProperty({ collides: true })
 
-    this.fauna = this.physics.add.sprite(152, 35, 'fauna')
-    this.fauna.body.setSize(this.fauna.width * .5, this.fauna.height * .55)
-    this.fauna.body.offset.y = this.fauna.height * .5
-
-
-    this.fauna.anims.play(FAUNA.IDLEDOWN)
+    this.fauna = this.add.fauna(152, 35, 'fauna')
 
     this.cameras.main.startFollow(this.fauna, true)
 
@@ -59,6 +55,8 @@ export default class Game extends Phaser.Scene
     this.physics.add.collider(this.fauna, walls)
     this.physics.add.collider(lizards, walls)
     this.physics.add.collider(lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
+
+    // debugDraw(walls, this)
   }
 
   private handlePlayerLizardCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
@@ -69,45 +67,13 @@ export default class Game extends Phaser.Scene
 
     const dir = new Phaser.Math.Vector2(dx, dy).normalize().scale(200)
 
-    this.fauna.setVelocity(dir.x, dir.y)
-
-    this.hit = 1;
+    this.fauna.handleDamage(dir)
   }
 
   update(t: number, dt: number) {
-    if (!this.cursors || !this.fauna) {
-      return
-    }
 
-    if (this.hit > 0) {
-      this.hit = this.hit > 10 ? 0 : this.hit + 1
-      return;
-    }
-
-    const speed = 80;
-
-    if (this.cursors.left?.isDown) {
-      this.fauna.scaleX = -1
-      this.fauna.body.offset.x = this.fauna.body.width * 1.5
-
-      this.fauna.play(FAUNA.RUNSIDE, true)
-      this.fauna.setVelocity(-speed, 0)
-    } else if (this.cursors.right?.isDown) {
-      this.fauna.scaleX = 1
-      this.fauna.body.offset.x = this.fauna.body.width * 0.5
-
-      this.fauna.play(FAUNA.RUNSIDE, true)
-      this.fauna.setVelocity(speed, 0)
-    } else if (this.cursors.up?.isDown) {
-      this.fauna.play(FAUNA.RUNUP, true)
-      this.fauna.setVelocity(0, -speed)
-    } else if (this.cursors.down?.isDown) {
-      this.fauna.play(FAUNA.RUNDOWN, true)
-      this.fauna.setVelocity(0, speed)
-    } else {
-      const dir = this.fauna.anims.currentAnim.key.split('-').pop()?.toUpperCase();
-      this.fauna.play(FAUNA[`IDLE${dir}`], true)
-      this.fauna.setVelocity(0, 0)
+    if (this.fauna) {
+      this.fauna.update(this.cursors)
     }
   }
 }
