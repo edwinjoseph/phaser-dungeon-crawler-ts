@@ -17,6 +17,10 @@ export default class Game extends Phaser.Scene
 {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private fauna!: Fauna
+  
+  private knifes!: Phaser.Physics.Arcade.Group;
+  private lizards!: Phaser.Physics.Arcade.Group;
+
   private playerLizardCollider!: Phaser.Physics.Arcade.Collider
 
   constructor() {
@@ -42,11 +46,16 @@ export default class Game extends Phaser.Scene
 
     walls.setCollisionByProperty({ collides: true })
 
+    this.knifes = this.physics.add.group({
+      classType: Phaser.Physics.Arcade.Image,
+    })
+
     this.fauna = this.add.fauna(152, 35, 'fauna')
+    this.fauna.setKnifes(this.knifes)
 
     this.cameras.main.startFollow(this.fauna, true)
 
-    const lizards = this.physics.add.group({
+    this.lizards = this.physics.add.group({
       classType: Lizard,
       createCallback: (go) => {
         const lizard = go as Lizard
@@ -56,13 +65,25 @@ export default class Game extends Phaser.Scene
       }
     })
 
-    lizards.get(50, 150)
+    this.lizards.get(50, 150)
 
     this.physics.add.collider(this.fauna, walls)
-    this.physics.add.collider(lizards, walls)
-    this.playerLizardCollider = this.physics.add.collider(lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
+    this.physics.add.collider(this.lizards, walls)
+    this.physics.add.collider(this.knifes, walls, this.handleKnifesWallsCollision, undefined, this);
+    this.physics.add.collider(this.knifes, this.lizards, this.handleKnifesLizardCollision, undefined, this);
+    this.playerLizardCollider = this.physics.add.collider(this.lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
 
     // debugDraw(walls, this)
+  }
+
+  private handleKnifesWallsCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
+    this.knifes.killAndHide(obj1)
+
+  }
+
+  private handleKnifesLizardCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
+    this.knifes.killAndHide(obj1)
+    this.lizards.killAndHide(obj2)
   }
 
   private handlePlayerLizardCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {

@@ -20,6 +20,8 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
   private speed = 80
   private healthState = HealthState.IDLE
   private damageTime = 0
+  private knifes!: Phaser.Physics.Arcade.Group
+
   private _health = 3
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame?: string | number) {
@@ -29,6 +31,10 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
 
   get health() {
     return this._health
+  }
+
+  setKnifes(knifes: Phaser.Physics.Arcade.Group) {
+    this.knifes = knifes
   }
 
   handleDamage(dir: Phaser.Math.Vector2) {
@@ -51,7 +57,6 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
 
     const animDir = this.anims.currentAnim.key.split('-').pop()?.toUpperCase();
     this.play(FAUNA[`IDLE${animDir}`], true)
-
   }
 
   preUpdate(t: number, dt: number) {
@@ -74,10 +79,50 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  private throwKnife() {
+    if (!this.knifes) {
+      return
+    }
+
+    const knife = this.knifes.get(this.x, this.y, 'knife') as Phaser.Physics.Arcade.Image
+    const dir = this.anims.currentAnim.key.split('-').pop();
+    const vec = new Phaser.Math.Vector2(0, 0)
+
+    switch (dir) {
+      case 'up':
+        vec.y = -1
+        knife.y += -5
+        break;
+      case 'down':
+        vec.y = 1
+        break;
+      default:
+        vec.x = this.scaleX < 0 ? -1 : 1;
+        knife.y += 5
+        break;
+    }
+
+    const angle = vec.angle()
+
+    knife.setActive(true)
+    knife.setVisible(true)
+
+    knife.x += vec.x * 10;
+    knife.y += vec.y * 10;
+
+    knife.setRotation(angle)
+    knife.setVelocity(vec.x * 300, vec.y * 300)
+  }
+
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (!cursors || this.healthState === HealthState.DAMAGE || this.healthState === HealthState.DEAD) {
       return
     }
+
+    if (Phaser.Input.Keyboard.JustDown(cursors.space!)) {
+      this.throwKnife()
+      return
+    } 
 
     if (cursors.left?.isDown) {
       this.scaleX = -1
