@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 
 import Preloader from './scenes/Preloader'
 import Game from './scenes/Game'
+import GameUI from './scenes/GameUi'
 
 
 export default new Phaser.Game({
@@ -11,10 +12,10 @@ export default new Phaser.Game({
 	physics: {
 		default: 'arcade',
 		arcade: {
-			gravity: { y: 0 }
-		}
+			gravity: { y: 0 },
+		},
 	},
-	scene: [Preloader, Game],
+	scene: [Preloader, Game, GameUI],
 	scale: {
 		zoom: 2
 	}

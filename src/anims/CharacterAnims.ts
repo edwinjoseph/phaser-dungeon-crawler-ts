@@ -7,6 +7,7 @@ export enum FAUNA {
   RUNDOWN = 'fauna-run-down',
   RUNUP = 'fauna-run-up',
   RUNSIDE = 'fauna-run-side',
+  FAINT = 'fauna-faint',
 }
 
 export const createCharacterAnims = (anims: Phaser.Animations.AnimationManager) => {
@@ -64,5 +65,15 @@ export const createCharacterAnims = (anims: Phaser.Animations.AnimationManager) 
     }),
     repeat: -1,
     frameRate: 16,
+  })
+  anims.create({
+    key: FAUNA.FAINT,
+    frames: anims.generateFrameNames('fauna', {
+      start: 1,
+      end: 4,
+      prefix: 'faint-',
+      suffix: '.png',
+    }),
+    frameRate: 8,
   })
 }

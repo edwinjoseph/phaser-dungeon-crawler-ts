@@ -13,22 +13,37 @@ declare global {
 enum HealthState {
   IDLE,
   DAMAGE,
+  DEAD,
 }
 
 export default class Fauna extends Phaser.Physics.Arcade.Sprite {
   private speed = 80
   private healthState = HealthState.IDLE
   private damageTime = 0
+  private _health = 3
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame?: string | number) {
     super(scene, x, y, texture, frame)
     this.anims.play(FAUNA.IDLEDOWN)
   }
 
+  get health() {
+    return this._health
+  }
+
   handleDamage(dir: Phaser.Math.Vector2) {
-    if (this.healthState === HealthState.DAMAGE) {
+    if (this.healthState === HealthState.DAMAGE || this.healthState === HealthState.DEAD) {
       return;
     }
+
+    --this._health
+
+    if (this._health <= 0) {
+      this.healthState = HealthState.DEAD
+      this.play(FAUNA.FAINT)
+      return;
+    }
+
     this.setVelocity(dir.x, dir.y)
     this.setTint(0xFF0000)
     this.healthState = HealthState.DAMAGE
@@ -36,6 +51,7 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
 
     const animDir = this.anims.currentAnim.key.split('-').pop()?.toUpperCase();
     this.play(FAUNA[`IDLE${animDir}`], true)
+
   }
 
   preUpdate(t: number, dt: number) {
@@ -50,13 +66,16 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
           this.damageTime = 0
         }
         break;
+      case HealthState.DEAD:
+        this.setVelocity(0)
+        break;
       default:
         break;
     }
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    if (!cursors || this.healthState === HealthState.DAMAGE) {
+    if (!cursors || this.healthState === HealthState.DAMAGE || this.healthState === HealthState.DEAD) {
       return
     }
 

@@ -6,6 +6,9 @@ import Fauna from '../characters/Fauna'
 import { createCharacterAnims } from '../anims/CharacterAnims'
 import { createLizardAnims } from '../anims/EnemyAnims'
 
+import { sceneEvents, EVENTS } from '../events/EventCenter'
+
+
 import '../characters/Fauna'
 
 import { debugDraw } from '../utils/debug'
@@ -14,6 +17,7 @@ export default class Game extends Phaser.Scene
 {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private fauna!: Fauna
+  private playerLizardCollider!: Phaser.Physics.Arcade.Collider
 
   constructor() {
 		super('game')
@@ -24,6 +28,8 @@ export default class Game extends Phaser.Scene
   }
 
   create() {
+    this.scene.run('game-ui')
+
     createCharacterAnims(this.anims)
     createLizardAnims(this.anims)
 
@@ -54,7 +60,7 @@ export default class Game extends Phaser.Scene
 
     this.physics.add.collider(this.fauna, walls)
     this.physics.add.collider(lizards, walls)
-    this.physics.add.collider(lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
+    this.playerLizardCollider = this.physics.add.collider(lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
 
     // debugDraw(walls, this)
   }
@@ -68,6 +74,11 @@ export default class Game extends Phaser.Scene
     const dir = new Phaser.Math.Vector2(dx, dy).normalize().scale(200)
 
     this.fauna.handleDamage(dir)
+    sceneEvents.emit(EVENTS.PLAYER.HEALTH, this.fauna.health)
+
+    if (this.fauna.health <= 0) {
+      this.playerLizardCollider.destroy();
+    }
   }
 
   update(t: number, dt: number) {
