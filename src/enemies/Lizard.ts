@@ -1,5 +1,10 @@
 import Phaser from 'phaser'
 
+import Chest from '../items/Chest'
+import Fauna from '../characters/Fauna'
+
+import { sceneEvents, EVENTS } from '../events/EventCenter'
+
 enum DIRECTION {
   UP,
   DOWN,
@@ -27,6 +32,7 @@ export default class Lizard extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, texture, frame)
 
     scene.physics.world.on(Phaser.Physics.Arcade.Events.TILE_COLLIDE, this.handleTileCollision)
+    scene.physics.world.on(Phaser.Physics.Arcade.Events.COLLIDE, this.handleObjectCollision)
 
     this.moveEvent = scene.time.addEvent({
       delay: 2000, 
@@ -41,11 +47,38 @@ export default class Lizard extends Phaser.Physics.Arcade.Sprite {
 
   private handleTileCollision = (go: Phaser.GameObjects.GameObject, tile: Phaser.Tilemaps.Tile) => {
     if (go !== this) {
-      console.log(go, this);
       return;
     }
     
     this.newDirection()
+  }
+
+  private handleObjectCollision = (obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) => {
+    if (obj1 instanceof Fauna) {
+      const fauna = obj1 as Fauna;
+      const lizard = obj2 as Lizard
+
+      const dx = fauna.x - lizard.x
+      const dy = fauna.y - lizard.y
+
+      const dir = new Phaser.Math.Vector2(dx, dy).normalize().scale(200)
+
+      fauna.handleDamage(dir)
+      return
+    }
+
+    if (obj2 instanceof Chest) {
+      this.newDirection()
+      return
+    }
+    
+    if (obj2 instanceof Phaser.Physics.Arcade.Image) {
+      if (obj2.texture.key === 'knife') {
+        obj2.destroy();
+        obj1.destroy();
+      }
+      return;
+    }
   }
 
   private newDirection() {

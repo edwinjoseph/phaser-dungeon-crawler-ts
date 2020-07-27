@@ -23,10 +23,18 @@ export default class GameUI extends Phaser.Scene {
       quantity: 3,
     })
 
+    const coinsLabel = this.add.text(this.sys.game.canvas.width - 15, 4, '0', { align: 'right', fontSize: 12 })
+    coinsLabel.setOrigin(1, 0)
+    this.add.image(this.sys.game.canvas.width - 10, 10, 'treasure', 'coin_anim_f0.png')
+
     sceneEvents.on(EVENTS.PLAYER.HEALTH, this.handlePlayerHealthChanged, this)
+    sceneEvents.on(EVENTS.PLAYER.COINS, (coins: number) => {
+      coinsLabel.text = coins.toLocaleString()
+    })
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       sceneEvents.off(EVENTS.PLAYER.HEALTH, this.handlePlayerHealthChanged)
+      sceneEvents.off(EVENTS.PLAYER.COINS)
     })
   }
 

@@ -1,6 +1,10 @@
 import Phaser from 'phaser'
+import inRange from 'lodash.inrange';
 
+import Chest from '../items/Chest'
 import { FAUNA } from '../anims/CharacterAnims'
+
+import { sceneEvents, EVENTS } from '../events/EventCenter'
 
 declare global {
   namespace Phaser.GameObjects {
@@ -21,8 +25,10 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
   private healthState = HealthState.IDLE
   private damageTime = 0
   private knifes!: Phaser.Physics.Arcade.Group
+  private activeChest?: Chest
 
   private _health = 3
+  private _coins = 0
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame?: string | number) {
     super(scene, x, y, texture, frame)
@@ -37,6 +43,10 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
     this.knifes = knifes
   }
 
+  setChest(chest: Chest) {
+    this.activeChest = chest
+  }
+
   handleDamage(dir: Phaser.Math.Vector2) {
     if (this.healthState === HealthState.DAMAGE || this.healthState === HealthState.DEAD) {
       return;
@@ -44,9 +54,12 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
 
     --this._health
 
+    sceneEvents.emit(EVENTS.PLAYER.HEALTH, this._health)
+
     if (this._health <= 0) {
       this.healthState = HealthState.DEAD
       this.play(FAUNA.FAINT)
+      this.disableBody();
       return;
     }
 
@@ -85,7 +98,11 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
     }
 
     const knife = this.knifes.get(this.x, this.y, 'knife') as Phaser.Physics.Arcade.Image
-    const dir = this.anims.currentAnim.key.split('-').pop();
+    if (!knife) {
+      return
+    }
+
+    const dir = this.anims.currentAnim.key.split('-').pop()
     const vec = new Phaser.Math.Vector2(0, 0)
 
     switch (dir) {
@@ -97,7 +114,7 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
         vec.y = 1
         break;
       default:
-        vec.x = this.scaleX < 0 ? -1 : 1;
+        vec.x = this.scaleX < 0 ? -1 : 1
         knife.y += 5
         break;
     }
@@ -119,10 +136,25 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
       return
     }
 
+    const animDir = this.anims.currentAnim.key.split('-').pop();
+
+    // Unset active chest is not infront or not facing chest
+    if (this.activeChest) {
+      const dy = this.y - this.activeChest.y
+      if (dy !== this.activeChest.height * 0.5 || animDir !== 'up') {
+        this.activeChest = undefined
+      }
+    }
+
     if (Phaser.Input.Keyboard.JustDown(cursors.space!)) {
-      this.throwKnife()
+      if (this.activeChest) {
+        this._coins += this.activeChest!.open()
+        sceneEvents.emit(EVENTS.PLAYER.COINS, this._coins)
+      } else {
+        this.throwKnife()
+      }
       return
-    } 
+    }
 
     if (cursors.left?.isDown) {
       this.scaleX = -1
@@ -143,7 +175,7 @@ export default class Fauna extends Phaser.Physics.Arcade.Sprite {
       this.play(FAUNA.RUNDOWN, true)
       this.setVelocity(0, this.speed)
     } else {
-      const dir = this.anims.currentAnim.key.split('-').pop()?.toUpperCase();
+      const dir = animDir?.toUpperCase();
       this.play(FAUNA[`IDLE${dir}`], true)
       this.setVelocity(0, 0)
     }

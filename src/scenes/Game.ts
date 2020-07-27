@@ -2,9 +2,11 @@ import Phaser from 'phaser'
 
 import Lizard from '../enemies/Lizard'
 import Fauna from '../characters/Fauna'
+import Chest from '../items/Chest'
 
 import { createCharacterAnims } from '../anims/CharacterAnims'
 import { createLizardAnims } from '../anims/EnemyAnims'
+import { createTreasureAnims, CHEST } from '../anims/TreasureAnims'
 
 import { sceneEvents, EVENTS } from '../events/EventCenter'
 
@@ -21,8 +23,6 @@ export default class Game extends Phaser.Scene
   private knifes!: Phaser.Physics.Arcade.Group;
   private lizards!: Phaser.Physics.Arcade.Group;
 
-  private playerLizardCollider!: Phaser.Physics.Arcade.Collider
-
   constructor() {
 		super('game')
 	}
@@ -36,6 +36,7 @@ export default class Game extends Phaser.Scene
 
     createCharacterAnims(this.anims)
     createLizardAnims(this.anims)
+    createTreasureAnims(this.anims)
 
     const map = this.make.tilemap({ key: 'dungeon' })
     const tileset = map.addTilesetImage('dungeon', 'tiles', 16, 16, 1, 2)
@@ -46,13 +47,21 @@ export default class Game extends Phaser.Scene
 
     walls.setCollisionByProperty({ collides: true })
 
+    const chests = this.physics.add.staticGroup({
+      classType: Chest,
+    }) 
+    const chestsLayer = map.getObjectLayer('Chests')
+    chestsLayer.objects.forEach(chest => {
+      chests.get(chest.x! + chest.width! * 0.5, chest.y! - chest.height! * 0.5, 'treasure')
+    })
+
     this.knifes = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Image,
+      maxSize: 3,
     })
 
     this.fauna = this.add.fauna(152, 35, 'fauna')
     this.fauna.setKnifes(this.knifes)
-
     this.cameras.main.startFollow(this.fauna, true)
 
     this.lizards = this.physics.add.group({
@@ -65,45 +74,37 @@ export default class Game extends Phaser.Scene
       }
     })
 
-    this.lizards.get(50, 150)
+    const enemiesLayer = map.getObjectLayer('Enemies')
+    enemiesLayer.objects.forEach(enemy => {
+      if (enemy.type === 'lizard') {
+        this.lizards.get(enemy.x! + enemy.width! * 0.5, enemy.y! - enemy.height! * 0.5, 'lizard')
+      }
+    })
 
     this.physics.add.collider(this.fauna, walls)
-    this.physics.add.collider(this.lizards, walls)
-    this.physics.add.collider(this.knifes, walls, this.handleKnifesWallsCollision, undefined, this);
-    this.physics.add.collider(this.knifes, this.lizards, this.handleKnifesLizardCollision, undefined, this);
-    this.playerLizardCollider = this.physics.add.collider(this.lizards, this.fauna, this.handlePlayerLizardCollision, undefined, this)
+    this.physics.add.collider(this.fauna, chests, this.handlePlayerChestCollision, undefined, this)
 
-    // debugDraw(walls, this)
+    this.physics.add.collider(this.lizards, walls)
+    this.physics.add.collider(this.lizards, chests)
+    this.physics.add.collider(this.lizards, this.knifes)
+    this.physics.add.collider(this.lizards, this.fauna)
+
+    this.physics.add.collider(this.knifes, walls, this.handleKnifesWallsCollision, this.processKnifesWallsCollision, this)
   }
 
+  private handlePlayerChestCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
+    const chest = obj2 as Chest
+    this.fauna.setChest(chest)
+  }
+
+  private processKnifesWallsCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
+    return obj1.active
+  }
   private handleKnifesWallsCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
     this.knifes.killAndHide(obj1)
-
-  }
-
-  private handleKnifesLizardCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
-    this.knifes.killAndHide(obj1)
-    this.lizards.killAndHide(obj2)
-  }
-
-  private handlePlayerLizardCollision(obj1: Phaser.GameObjects.GameObject, obj2: Phaser.GameObjects.GameObject) {
-    const lizard = obj2 as Lizard
-
-    const dx = this.fauna.x - lizard.x
-    const dy = this.fauna.y - lizard.y
-
-    const dir = new Phaser.Math.Vector2(dx, dy).normalize().scale(200)
-
-    this.fauna.handleDamage(dir)
-    sceneEvents.emit(EVENTS.PLAYER.HEALTH, this.fauna.health)
-
-    if (this.fauna.health <= 0) {
-      this.playerLizardCollider.destroy();
-    }
   }
 
   update(t: number, dt: number) {
-
     if (this.fauna) {
       this.fauna.update(this.cursors)
     }
