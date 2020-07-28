@@ -6,10 +6,7 @@ import Chest from '../items/Chest'
 
 import { createCharacterAnims } from '../anims/CharacterAnims'
 import { createLizardAnims } from '../anims/EnemyAnims'
-import { createTreasureAnims, CHEST } from '../anims/TreasureAnims'
-
-import { sceneEvents, EVENTS } from '../events/EventCenter'
-
+import { createTreasureAnims } from '../anims/TreasureAnims'
 
 import '../characters/Fauna'
 
